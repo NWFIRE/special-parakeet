@@ -1,0 +1,101 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+  --background: #f5efe2;
+  --background-soft: rgba(255, 251, 243, 0.78);
+  --foreground: #172033;
+  --card: rgba(255, 255, 255, 0.82);
+  --card-strong: rgba(255, 255, 255, 0.94);
+  --border: rgba(135, 151, 175, 0.24);
+  --border-strong: rgba(54, 72, 103, 0.18);
+  --brand: #0f766e;
+  --brand-dark: #134e4a;
+  --brand-ink: #0c3432;
+  --accent: #f59e0b;
+  --accent-soft: rgba(245, 158, 11, 0.15);
+  --shadow-soft: 0 24px 70px rgba(24, 34, 58, 0.10);
+  --shadow-strong: 0 28px 90px rgba(18, 28, 47, 0.18);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--foreground);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(15, 118, 110, 0.18), transparent 28%),
+    radial-gradient(circle at 100% 12%, rgba(245, 158, 11, 0.18), transparent 24%),
+    radial-gradient(circle at 50% 100%, rgba(59, 130, 246, 0.08), transparent 26%),
+    linear-gradient(180deg, #fbf7ef 0%, #f5efe2 48%, #f2eadb 100%);
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px);
+  background-size: 32px 32px;
+  mask-image: radial-gradient(circle at center, black 28%, transparent 90%);
+  opacity: 0.35;
+}
+
+* {
+  border-color: #d1d5db;
+}
+
+::selection {
+  background: rgba(15, 118, 110, 0.16);
+}
+
+.font-display {
+  font-family: var(--font-display), sans-serif;
+}
+
+.font-sans {
+  font-family: var(--font-body), sans-serif;
+}
+
+.glass-panel {
+  background: var(--card);
+  backdrop-filter: blur(18px);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-soft);
+}
+
+.glass-panel-strong {
+  background: var(--card-strong);
+  backdrop-filter: blur(22px);
+  border: 1px solid var(--border-strong);
+  box-shadow: var(--shadow-strong);
+}
+
+.surface-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+.eyebrow {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--brand-dark);
+}
+
+.balance-text {
+  text-wrap: balance;
+}
+
+@media (max-width: 640px) {
+  body::before {
+    opacity: 0.22;
+  }
+}
