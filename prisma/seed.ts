@@ -1,4 +1,4 @@
-﻿import { InspectionServiceType, MembershipRole, PrismaClient, ReportStatus, SubscriptionStatus, TaskPriority, TaskStatus, UserType } from "@prisma/client";
+import { InspectionServiceType, MembershipRole, PrismaClient, ReportStatus, SubscriptionStatus, TaskPriority, TaskStatus, UserType } from "@prisma/client";
 import { hashPassword } from "../lib/password";
 
 const db = new PrismaClient();
@@ -174,6 +174,7 @@ async function main() {
         clientId: client.id,
         title: "Quarterly Fire Alarm Inspection",
         reportNumber: "FA-2401",
+        inspectionType: "fire_alarm",
         serviceType: InspectionServiceType.FIRE_ALARM,
         status: ReportStatus.INVOICED,
         propertyName: "North Ridge Tower",
@@ -200,6 +201,7 @@ async function main() {
         clientId: client.id,
         title: "Wet Sprinkler Annual Inspection",
         reportNumber: "SP-2407",
+        inspectionType: "wet_sprinkler",
         serviceType: InspectionServiceType.FIRE_SPRINKLER,
         status: ReportStatus.INVOICED,
         propertyName: "North Ridge Annex",
@@ -228,6 +230,7 @@ async function main() {
         clientId: client.id,
         title: "Portable Fire Extinguisher Service",
         reportNumber: "FE-2411",
+        inspectionType: "fire_extinguisher",
         serviceType: InspectionServiceType.FIRE_EXTINGUISHER,
         status: ReportStatus.ISSUED,
         propertyName: "North Ridge Retail",

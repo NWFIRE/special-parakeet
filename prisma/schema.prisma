@@ -101,6 +101,7 @@ model InspectionReport {
   clientId           String
   title              String
   reportNumber       String?
+  inspectionType     String
   serviceType        InspectionServiceType
   status             ReportStatus          @default(DRAFT)
   propertyName       String

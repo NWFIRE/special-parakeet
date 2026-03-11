@@ -1,4 +1,4 @@
-﻿"use server";
+"use server";
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
@@ -122,6 +122,7 @@ export async function createInspectionReportAction(_: typeof initialState | unde
         clientId: parsed.data.clientId,
         title: parsed.data.title,
         reportNumber: parsed.data.reportNumber || null,
+        inspectionType: toLegacyInspectionType(parsed.data.serviceType),
         serviceType: parsed.data.serviceType,
         status: parsed.data.status,
         propertyName: parsed.data.propertyName,
@@ -193,6 +194,7 @@ export async function updateInspectionReportAction(_: typeof initialState | unde
         clientId: parsed.data.clientId,
         title: parsed.data.title,
         reportNumber: parsed.data.reportNumber || null,
+        inspectionType: toLegacyInspectionType(parsed.data.serviceType),
         serviceType: parsed.data.serviceType,
         status: parsed.data.status,
         propertyName: parsed.data.propertyName,
