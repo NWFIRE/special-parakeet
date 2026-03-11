@@ -1,12 +1,12 @@
 "use client";
 
-import type { InspectionOutcome } from "@prisma/client";
+import type { InspectionOutcome, InspectionServiceType } from "@prisma/client";
 import { FileSpreadsheet, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { DraftAsset } from "@/lib/inspection-smart-defaults";
-import { type ServiceWorkflowConfig, outcomeLabels } from "@/lib/inspection-config";
+import { getSuggestedExtinguisherUlRating, type ServiceWorkflowConfig, outcomeLabels } from "@/lib/inspection-config";
 import { cn } from "@/lib/utils";
 
 function FieldMeta({ meta, currentValue }: { meta?: { sourceLabel: string; sourceValue: string }; currentValue: string }) {
@@ -18,9 +18,41 @@ function FieldMeta({ meta, currentValue }: { meta?: { sourceLabel: string; sourc
   return <p className={cn("mt-1 text-xs", overridden ? "text-amber-700" : "text-slate-500")}>{overridden ? "Overridden" : "Auto-filled"} from {meta.sourceLabel}</p>;
 }
 
+const defaultBaseFields = ["assetName", "location", "assetTag", "deviceType", "manufacturer", "model", "serialNumber", "ulListing", "complianceFrequency"];
+
+function createAutofillMeta(sourceValue: string) {
+  return {
+    sourceType: "TEMPLATE" as const,
+    sourceLabel: "Extinguisher rating lookup",
+    sourceValue,
+  };
+}
+
+function updateExtinguisherDerivedFields(asset: DraftAsset) {
+  const extinguisherType = asset.attributes.extinguisherType ?? "";
+  const size = asset.attributes.size ?? "";
+  const suggestedUl = getSuggestedExtinguisherUlRating(extinguisherType, size);
+  const nextAsset = {
+    ...asset,
+    deviceType: extinguisherType,
+  };
+
+  const previousLookupValue = asset.autofillMeta.ulListing?.sourceLabel === "Extinguisher rating lookup" ? asset.autofillMeta.ulListing.sourceValue : "";
+  if (suggestedUl && (!asset.ulListing || asset.ulListing === previousLookupValue)) {
+    nextAsset.ulListing = suggestedUl;
+    nextAsset.autofillMeta = {
+      ...asset.autofillMeta,
+      ulListing: createAutofillMeta(suggestedUl),
+    };
+  }
+
+  return nextAsset;
+}
+
 export function InspectionAssetCard({
   asset,
   index,
+  serviceType,
   serviceConfig,
   canRemove,
   onRemove,
@@ -29,12 +61,15 @@ export function InspectionAssetCard({
 }: {
   asset: DraftAsset;
   index: number;
+  serviceType: InspectionServiceType;
   serviceConfig: ServiceWorkflowConfig;
   canRemove: boolean;
   onRemove: () => void;
   onChange: (next: DraftAsset) => void;
   onApplyTemplate: (templateKey: string) => void;
 }) {
+  const baseFields = serviceType === "FIRE_EXTINGUISHER" ? serviceConfig.baseFields ?? ["location", "manufacturer", "ulListing"] : defaultBaseFields;
+
   return (
     <div className="rounded-[1.7rem] border border-slate-200/80 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -48,22 +83,26 @@ export function InspectionAssetCard({
         </div>
       </div>
 
-      <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {["assetName", "location", "assetTag", "deviceType", "manufacturer", "model", "serialNumber", "ulListing", "complianceFrequency"].map((key) => (
+      <div className={cn("mt-5 grid gap-4", serviceType === "FIRE_EXTINGUISHER" ? "md:grid-cols-3" : "md:grid-cols-2 xl:grid-cols-3")}>
+        {baseFields.map((key) => (
           <div key={key}>
             <label className="mb-2 block text-sm font-medium capitalize text-slate-700">{key.replace(/([A-Z])/g, " $1")}</label>
             <Input value={String((asset as unknown as Record<string, string>)[key] ?? "")} onChange={(event) => onChange({ ...asset, [key]: event.currentTarget.value } as DraftAsset)} />
             <FieldMeta meta={asset.autofillMeta[key]} currentValue={String((asset as unknown as Record<string, string>)[key] ?? "")} />
           </div>
         ))}
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Last service date</label>
-          <Input type="date" value={asset.lastServiceDate} onChange={(event) => onChange({ ...asset, lastServiceDate: event.currentTarget.value })} />
-        </div>
-        <div>
-          <label className="mb-2 block text-sm font-medium text-slate-700">Next service date</label>
-          <Input type="date" value={asset.nextServiceDate} onChange={(event) => onChange({ ...asset, nextServiceDate: event.currentTarget.value })} />
-        </div>
+        {serviceType !== "FIRE_EXTINGUISHER" ? (
+          <>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">Last service date</label>
+              <Input type="date" value={asset.lastServiceDate} onChange={(event) => onChange({ ...asset, lastServiceDate: event.currentTarget.value })} />
+            </div>
+            <div>
+              <label className="mb-2 block text-sm font-medium text-slate-700">Next service date</label>
+              <Input type="date" value={asset.nextServiceDate} onChange={(event) => onChange({ ...asset, nextServiceDate: event.currentTarget.value })} />
+            </div>
+          </>
+        ) : null}
       </div>
 
       <div className="mt-6 grid gap-4 xl:grid-cols-2">
@@ -74,7 +113,17 @@ export function InspectionAssetCard({
               <div key={field.key} className={field.type === "textarea" ? "md:col-span-2" : ""}>
                 <label className="mb-2 block text-sm font-medium text-slate-700">{field.label}</label>
                 {field.type === "select" ? (
-                  <select value={asset.attributes[field.key] ?? ""} onChange={(event) => onChange({ ...asset, attributes: { ...asset.attributes, [field.key]: event.currentTarget.value } })} className="w-full rounded-2xl border border-slate-300/80 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10">
+                  <select
+                    value={asset.attributes[field.key] ?? ""}
+                    onChange={(event) => {
+                      const next = {
+                        ...asset,
+                        attributes: { ...asset.attributes, [field.key]: event.currentTarget.value }
+                      };
+                      onChange(serviceType === "FIRE_EXTINGUISHER" ? updateExtinguisherDerivedFields(next) : next);
+                    }}
+                    className="w-full rounded-2xl border border-slate-300/80 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10"
+                  >
                     <option value="">Select</option>
                     {field.options?.map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
