@@ -1,3 +1,4 @@
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -58,73 +59,245 @@ enum InspectionServiceType {
   OTHER
 }
 
+enum InspectionOutcome {
+  PASS
+  ATTENTION
+  FAIL
+  NOT_APPLICABLE
+}
+
+enum AutofillSourceType {
+  ASSET_RECORD
+  PREVIOUS_REPORT
+  SITE_DEFAULT
+  TEAM_PROFILE
+  TEMPLATE
+  MANUAL
+}
+
 model User {
-  id            String       @id @default(cuid())
-  name          String?
-  email         String       @unique
-  emailVerified DateTime?
-  image         String?
-  passwordHash  String?
-  userType      UserType     @default(INTERNAL)
-  clientId      String?
-  client        Client?      @relation(fields: [clientId], references: [id], onDelete: SetNull)
-  accounts      Account[]
-  sessions      Session[]
-  memberships   Membership[]
-  invites       Invite[]     @relation("InviteSender")
-  assignedTasks Task[]       @relation("TaskAssignee")
-  createdAt     DateTime     @default(now())
-  updatedAt     DateTime     @updatedAt
+  id               String                 @id @default(cuid())
+  name             String?
+  email            String                 @unique
+  emailVerified    DateTime?
+  image            String?
+  passwordHash     String?
+  userType         UserType               @default(INTERNAL)
+  clientId         String?
+  client           Client?                @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  accounts         Account[]
+  sessions         Session[]
+  memberships      Membership[]
+  invites          Invite[]               @relation("InviteSender")
+  assignedTasks    Task[]                 @relation("TaskAssignee")
+  inspectionAudits InspectionFieldAudit[] @relation("InspectionAuditUser")
+  createdAt        DateTime               @default(now())
+  updatedAt        DateTime               @updatedAt
 }
 
 model Client {
-  id            String             @id @default(cuid())
-  teamId        String
-  companyName   String
-  contactName   String?
-  contactEmail  String?
-  contactPhone  String?
-  siteCount     Int?
-  notes         String?
-  team          Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  users         User[]
-  reports       InspectionReport[]
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  id           String             @id @default(cuid())
+  teamId       String
+  companyName  String
+  contactName  String?
+  contactEmail String?
+  contactPhone String?
+  siteCount    Int?
+  notes        String?
+  team         Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  users        User[]
+  reports      InspectionReport[]
+  sites        ClientSite[]
+  assets       InspectionAsset[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 
   @@index([teamId, companyName])
 }
 
+model ClientSite {
+  id             String             @id @default(cuid())
+  teamId         String
+  clientId       String
+  name           String
+  siteCode       String?
+  addressLine1   String
+  addressLine2   String?
+  city           String?
+  state          String?
+  postalCode     String?
+  contactName    String?
+  contactEmail   String?
+  contactPhone   String?
+  notes          String?
+  reportDefaults Json?
+  team           Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  client         Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  reports        InspectionReport[]
+  assets         InspectionAsset[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([teamId, clientId, name])
+}
+
+model InspectionAsset {
+  id                    String                 @id @default(cuid())
+  teamId                String
+  clientId              String
+  siteId                String
+  serviceType           InspectionServiceType
+  name                  String
+  location              String?
+  assetTag              String?
+  deviceType            String?
+  manufacturer          String?
+  model                 String?
+  serialNumber          String?
+  ulListing             String?
+  complianceFrequency   String?
+  installDate           DateTime?
+  lastServiceDate       DateTime?
+  nextServiceDate       DateTime?
+  defaultCodeReferences Json?
+  profileData           Json?
+  lastInspectionData    Json?
+  active                Boolean                @default(true)
+  team                  Team                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  client                Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  site                  ClientSite             @relation(fields: [siteId], references: [id], onDelete: Cascade)
+  reportAssets          InspectionReportAsset[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+
+  @@index([teamId, serviceType, name])
+  @@index([siteId, serviceType])
+}
 model InspectionReport {
-  id                 String                @id @default(cuid())
-  teamId             String
-  clientId           String
-  title              String
-  reportNumber       String?
-  inspectionType     String
-  serviceType        InspectionServiceType
-  status             ReportStatus          @default(DRAFT)
-  propertyName       String
-  propertyAddress    String?
-  inspectorName      String?
-  pointOfContact     String?
-  frequencyLabel     String?
-  completedAt        DateTime?
-  nextInspectionDate DateTime?
-  notes              String?
-  checklistItems     Json?
-  deficiencies       Json?
-  equipmentSummary   Json?
-  pdfUrl             String?
-  team               Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  client             Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdAt          DateTime              @default(now())
-  updatedAt          DateTime              @updatedAt
+  id                      String                 @id @default(cuid())
+  teamId                  String
+  clientId                String
+  siteId                  String?
+  title                   String
+  reportNumber            String?
+  inspectionType          String
+  serviceType             InspectionServiceType
+  status                  ReportStatus           @default(DRAFT)
+  overallStatus           InspectionOutcome      @default(PASS)
+  propertyName            String
+  propertyAddress         String?
+  inspectorName           String?
+  pointOfContact          String?
+  frequencyLabel          String?
+  serviceDate             DateTime               @default(now())
+  completedAt             DateTime?
+  nextInspectionDate      DateTime?
+  summary                 String?
+  recommendationSummary   String?
+  notes                   String?
+  codeReferences          Json?
+  checklistItems          Json?
+  deficiencies            Json?
+  equipmentSummary        Json?
+  technicianLicense       String?
+  technicianCertification String?
+  customerSignature       Json?
+  technicianSignature     Json?
+  photoUrls               Json?
+  autoFillSummary         Json?
+  pdfUrl                  String?
+  finalizedAt             DateTime?
+  portalPublishedAt       DateTime?
+  team                    Team                   @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  client                  Client                 @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  site                    ClientSite?            @relation(fields: [siteId], references: [id], onDelete: SetNull)
+  assets                  InspectionReportAsset[]
+  audits                  InspectionFieldAudit[]
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
 
   @@index([teamId, status, completedAt])
   @@index([clientId, status, completedAt])
+  @@index([siteId, serviceType, completedAt])
 }
 
+model InspectionReportAsset {
+  id                  String                 @id @default(cuid())
+  reportId            String
+  assetId             String?
+  sortOrder           Int                    @default(0)
+  assetName           String
+  location            String?
+  assetTag            String?
+  deviceType          String?
+  manufacturer        String?
+  model               String?
+  serialNumber        String?
+  ulListing           String?
+  complianceFrequency String?
+  lastServiceDate     DateTime?
+  nextServiceDate     DateTime?
+  status              InspectionOutcome      @default(PASS)
+  deficiencySummary   String?
+  recommendationText  String?
+  followUpRequired    Boolean                @default(false)
+  attributes          Json?
+  testResults         Json?
+  codeReferences      Json?
+  appliedTemplateKeys Json?
+  autofillMeta        Json?
+  report              InspectionReport       @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  asset               InspectionAsset?       @relation(fields: [assetId], references: [id], onDelete: SetNull)
+  audits              InspectionFieldAudit[]
+  createdAt           DateTime               @default(now())
+  updatedAt           DateTime               @updatedAt
+
+  @@index([reportId, sortOrder])
+  @@index([assetId, status])
+}
+
+model InspectionFieldAudit {
+  id            String                 @id @default(cuid())
+  reportId      String
+  reportAssetId String?
+  changedById   String?
+  fieldPath     String
+  sourceType    AutofillSourceType
+  sourceLabel   String?
+  sourceValue   String?
+  finalValue    String?
+  wasOverridden Boolean                @default(false)
+  report        InspectionReport       @relation(fields: [reportId], references: [id], onDelete: Cascade)
+  reportAsset   InspectionReportAsset? @relation(fields: [reportAssetId], references: [id], onDelete: Cascade)
+  changedBy     User?                  @relation("InspectionAuditUser", fields: [changedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime               @default(now())
+
+  @@index([reportId, createdAt])
+  @@index([reportAssetId, fieldPath])
+}
+
+model TeamProfile {
+  id                String   @id @default(cuid())
+  teamId            String   @unique
+  companyName       String?
+  logoUrl           String?
+  addressLine1      String?
+  addressLine2      String?
+  city              String?
+  state             String?
+  postalCode        String?
+  phone             String?
+  email             String?
+  website           String?
+  licenseNumbers    Json?
+  certificationText String?
+  reportDisclaimer  String?
+  footerText        String?
+  primaryColor      String?
+  team              Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+}
 model Team {
   id           String             @id @default(cuid())
   name         String
@@ -134,7 +307,10 @@ model Team {
   invites      Invite[]
   tasks        Task[]
   clients      Client[]
+  sites        ClientSite[]
+  assets       InspectionAsset[]
   reports      InspectionReport[]
+  profile      TeamProfile?
   subscription Subscription?
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
@@ -209,7 +385,6 @@ model Subscription {
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 }
-
 model Account {
   userId            String
   type              String
@@ -244,5 +419,3 @@ model VerificationToken {
 
   @@id([identifier, token])
 }
-
-
