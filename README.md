@@ -1,4 +1,4 @@
-# TradeWorx
+﻿# TradeWorx
 
 TradeWorx is a production-oriented SaaS app for small teams that need marketing pages, authentication, project management, task tracking, invites, analytics, subscription billing, and a secure customer portal for inspection reports in one Next.js codebase.
 
@@ -207,7 +207,7 @@ After `npm run prisma:seed`, you can sign in with:
 2. Choose the inspection service type.
 3. Let TradeWorx pull forward reusable asset data and prior verified values.
 4. Review each asset card, update findings, and apply deficiency templates when needed.
-5. Add summary notes, recommendations, signatures, and attachments/URLs.
+5. Add summary notes, printed names, signatures, and attachments/URLs.
 6. Save as draft or issue the report.
 7. Open the printable report route for a customer-ready version.
 
@@ -242,3 +242,4 @@ Run unit tests with:
 ```bash
 npm test
 ```
+

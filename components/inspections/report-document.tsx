@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge";
+﻿import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { inspectionServiceLabels, outcomeLabels } from "@/lib/inspection-config";
 import { formatDate } from "@/lib/utils";
@@ -37,7 +37,13 @@ type TeamProfileView = {
   footerText: string;
 };
 
-export function InspectionReportDocument({ report, assets, profile, customerName, siteName }: { report: { id: string; title: string; reportNumber: string | null; serviceType: keyof typeof inspectionServiceLabels; status: string; overallStatus: string; propertyName: string; propertyAddress: string | null; serviceDate: Date; completedAt: Date | null; nextInspectionDate: Date | null; inspectorName: string | null; pointOfContact: string | null; summary: string | null; recommendationSummary: string | null; notes: string | null; codeReferences: string[] | null; technicianLicense: string | null; technicianCertification: string | null; customerSignature: { name?: string; signedAt?: string } | null; technicianSignature: { name?: string; signedAt?: string } | null; photoUrls: string[] | null; }; assets: ReportAssetView[]; profile: TeamProfileView; customerName: string; siteName: string }) {
+type SignatureView = {
+  printedName?: string;
+  name?: string;
+  signedAt?: string;
+};
+
+export function InspectionReportDocument({ report, assets, profile, customerName, siteName }: { report: { id: string; title: string; reportNumber: string | null; serviceType: keyof typeof inspectionServiceLabels; status: string; overallStatus: string; propertyName: string; propertyAddress: string | null; serviceDate: Date; completedAt: Date | null; nextInspectionDate: Date | null; inspectorName: string | null; pointOfContact: string | null; summary: string | null; recommendationSummary: string | null; notes: string | null; codeReferences: string[] | null; technicianLicense: string | null; technicianCertification: string | null; customerSignature: SignatureView | null; technicianSignature: SignatureView | null; photoUrls: string[] | null; }; assets: ReportAssetView[]; profile: TeamProfileView; customerName: string; siteName: string }) {
   const address = [profile.addressLine1, profile.addressLine2, profile.city, profile.state, profile.postalCode].filter(Boolean).join(", ");
 
   return (
@@ -68,7 +74,7 @@ export function InspectionReportDocument({ report, assets, profile, customerName
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Customer</p><p className="mt-2 font-semibold text-slate-900">{customerName}</p><p className="mt-1 text-sm text-slate-500">{siteName}</p></div>
               <div className="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Inspection dates</p><p className="mt-2 font-semibold text-slate-900">{formatDate(report.completedAt ?? report.serviceDate)}</p><p className="mt-1 text-sm text-slate-500">Next due {formatDate(report.nextInspectionDate)}</p></div>
-              <div className="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Technician</p><p className="mt-2 font-semibold text-slate-900">{report.inspectorName ?? "Not recorded"}</p><p className="mt-1 text-sm text-slate-500">{report.technicianLicense ?? "No license on file"}</p></div>
+              <div className="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Technician</p><p className="mt-2 font-semibold text-slate-900">{report.technicianSignature?.printedName || report.inspectorName || "Not recorded"}</p><p className="mt-1 text-sm text-slate-500">{report.technicianLicense ?? "No license on file"}</p></div>
               <div className="rounded-[1.4rem] border border-slate-200 bg-slate-50 p-4"><p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Report ID</p><p className="mt-2 font-semibold text-slate-900">{report.reportNumber ?? report.id.slice(0, 8).toUpperCase()}</p><div className="mt-2 flex flex-wrap gap-2"><Badge value={report.status} /><Badge value={report.overallStatus} /></div></div>
             </div>
           </div>
@@ -94,7 +100,7 @@ export function InspectionReportDocument({ report, assets, profile, customerName
                 </div>
                 <div className="flex flex-wrap gap-2"><Badge value={asset.status} />{asset.followUpRequired ? <span className="rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">Follow-up recommended</span> : null}</div>
               </div>
-              <div className="mt-4 grid gap-4 md:grid-cols-2 xl:grid-cols-4 text-sm text-slate-600">
+              <div className="mt-4 grid gap-4 text-sm text-slate-600 md:grid-cols-2 xl:grid-cols-4">
                 <div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Type</p><p className="mt-2">{asset.deviceType || "Not recorded"}</p></div>
                 <div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Manufacturer / model</p><p className="mt-2">{[asset.manufacturer, asset.model].filter(Boolean).join(" / ") || "Not recorded"}</p></div>
                 <div><p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-400">Serial</p><p className="mt-2">{asset.serialNumber || "Not recorded"}</p></div>
@@ -112,13 +118,13 @@ export function InspectionReportDocument({ report, assets, profile, customerName
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Acknowledgements</p>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="rounded-[1.2rem] border border-slate-200 bg-slate-50 p-4"><p className="text-sm font-semibold text-slate-900">Customer signature</p><p className="mt-2 text-sm text-slate-600">{report.customerSignature?.name || "Not captured"}</p><p className="mt-1 text-xs text-slate-400">{report.customerSignature?.signedAt ? formatDate(report.customerSignature.signedAt) : ""}</p></div>
-              <div className="rounded-[1.2rem] border border-slate-200 bg-slate-50 p-4"><p className="text-sm font-semibold text-slate-900">Technician signature</p><p className="mt-2 text-sm text-slate-600">{report.technicianSignature?.name || report.inspectorName || "Not captured"}</p><p className="mt-1 text-xs text-slate-400">{report.technicianSignature?.signedAt ? formatDate(report.technicianSignature.signedAt) : ""}</p></div>
+              <div className="rounded-[1.2rem] border border-slate-200 bg-slate-50 p-4"><p className="text-sm font-semibold text-slate-900">Customer acknowledgement</p><p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Printed name</p><p className="mt-1 text-sm text-slate-700">{report.customerSignature?.printedName || "Not captured"}</p><p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Signature</p><p className="mt-1 text-sm text-slate-700">{report.customerSignature?.name || "Not captured"}</p><p className="mt-2 text-xs text-slate-400">{report.customerSignature?.signedAt ? formatDate(report.customerSignature.signedAt) : ""}</p></div>
+              <div className="rounded-[1.2rem] border border-slate-200 bg-slate-50 p-4"><p className="text-sm font-semibold text-slate-900">Technician acknowledgement</p><p className="mt-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Printed name</p><p className="mt-1 text-sm text-slate-700">{report.technicianSignature?.printedName || report.inspectorName || "Not captured"}</p><p className="mt-3 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">Signature</p><p className="mt-1 text-sm text-slate-700">{report.technicianSignature?.name || "Not captured"}</p><p className="mt-2 text-xs text-slate-400">{report.technicianSignature?.signedAt ? formatDate(report.technicianSignature.signedAt) : ""}</p></div>
             </div>
           </div>
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-slate-400">Compliance + footer</p>
-            {profile.licenseNumbers.length ? <p className="mt-4 text-sm leading-7 text-slate-700">Licenses: {profile.licenseNumbers.join(" · ")}</p> : null}
+            {profile.licenseNumbers.length ? <p className="mt-4 text-sm leading-7 text-slate-700">Licenses: {profile.licenseNumbers.join(" | ")}</p> : null}
             {profile.reportDisclaimer ? <p className="mt-3 text-sm leading-7 text-slate-600">{profile.reportDisclaimer}</p> : null}
             {profile.footerText ? <p className="mt-3 text-sm leading-7 text-slate-500">{profile.footerText}</p> : null}
           </div>
@@ -127,3 +133,4 @@ export function InspectionReportDocument({ report, assets, profile, customerName
     </div>
   );
 }
+

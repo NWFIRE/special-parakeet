@@ -1,1 +1,18 @@
-export { getInspectionTemplate, getServiceConfig, inspectionServiceLabels, outcomeLabels, outcomeTone, reportStatusLabels, serviceWorkflows, toLegacyInspectionType, toPrettyInspectionType } from "@/lib/inspection-config";
+﻿export {
+  buildExtinguisherAssetName,
+  extinguisherManufacturerOptions,
+  getExtinguisherHydroRule,
+  getExtinguisherSixYearRule,
+  getInspectionTemplate,
+  getServiceConfig,
+  getSuggestedExtinguisherNextHydroTest,
+  getSuggestedExtinguisherNextSixYearService,
+  getSuggestedExtinguisherUlRating,
+  inspectionServiceLabels,
+  outcomeLabels,
+  outcomeTone,
+  reportStatusLabels,
+  serviceWorkflows,
+  toLegacyInspectionType,
+  toPrettyInspectionType,
+} from "@/lib/inspection-config";

@@ -1,5 +1,13 @@
-import type { AutofillSourceType, InspectionOutcome, InspectionServiceType } from "@prisma/client";
-import { getServiceConfig } from "@/lib/inspection-config";
+﻿import type { AutofillSourceType, InspectionOutcome, InspectionServiceType } from "@prisma/client";
+import {
+  buildExtinguisherAssetName,
+  getExtinguisherSixYearRule,
+  getInspectionTemplate,
+  getServiceConfig,
+  getSuggestedExtinguisherNextHydroTest,
+  getSuggestedExtinguisherNextSixYearService,
+  getSuggestedExtinguisherUlRating,
+} from "@/lib/inspection-config";
 
 type JsonObject = Record<string, string | number | boolean | null | undefined>;
 type InspectionAssetLike = {
@@ -18,6 +26,7 @@ type InspectionAssetLike = {
   profileData: unknown;
   lastInspectionData: unknown;
 };
+
 type AutofillMetaRecord = Record<string, { sourceType: AutofillSourceType; sourceLabel: string; sourceValue: string }>;
 
 export type DraftCheck = {
@@ -77,13 +86,7 @@ function addMonths(value: Date, months: number) {
   return date;
 }
 
-function setAutofill(
-  meta: AutofillMetaRecord,
-  path: string,
-  sourceType: AutofillSourceType,
-  sourceLabel: string,
-  sourceValue: unknown
-) {
+function setAutofill(meta: AutofillMetaRecord, path: string, sourceType: AutofillSourceType, sourceLabel: string, sourceValue: unknown) {
   if (sourceValue === null || sourceValue === undefined || sourceValue === "") return;
   meta[path] = {
     sourceType,
@@ -92,10 +95,67 @@ function setAutofill(
   };
 }
 
+export function applyExtinguisherRules(asset: DraftAsset) {
+  const next = {
+    ...asset,
+    attributes: { ...asset.attributes },
+    autofillMeta: { ...asset.autofillMeta },
+  };
+  const extinguisherType = next.attributes.extinguisherType ?? "";
+  const size = next.attributes.size ?? "";
+  const suggestedName = buildExtinguisherAssetName(extinguisherType, size);
+  const priorAutoName = next.autofillMeta.assetName?.sourceLabel === "Extinguisher naming rules" ? next.autofillMeta.assetName.sourceValue : "";
+  if (!next.assetName || next.assetName === priorAutoName) {
+    next.assetName = suggestedName;
+    setAutofill(next.autofillMeta, "assetName", "TEMPLATE", "Extinguisher naming rules", suggestedName);
+  }
+
+  const ulRule = getSuggestedExtinguisherUlRating(extinguisherType, size);
+  const priorAutoUl = next.autofillMeta.ulListing?.sourceLabel?.includes("UL lookup") ? next.autofillMeta.ulListing.sourceValue : "";
+  if (ulRule) {
+    if (!next.ulListing || next.ulListing === priorAutoUl) {
+      next.ulListing = ulRule.value;
+      setAutofill(next.autofillMeta, "ulListing", "TEMPLATE", ulRule.sourceLabel, ulRule.value);
+    }
+  } else if (priorAutoUl && next.ulListing === priorAutoUl) {
+    next.ulListing = "";
+    delete next.autofillMeta.ulListing;
+  }
+
+  const sixYearRule = getExtinguisherSixYearRule(extinguisherType);
+  const sixYearSuggestion = getSuggestedExtinguisherNextSixYearService(extinguisherType, next.attributes.lastSixYearService ?? "");
+  const priorAutoNextSixYear = next.autofillMeta["attributes.nextSixYearService"]?.sourceLabel?.includes("interval") ? next.autofillMeta["attributes.nextSixYearService"].sourceValue : "";
+  if (sixYearSuggestion) {
+    if (!next.attributes.nextSixYearService || next.attributes.nextSixYearService === priorAutoNextSixYear) {
+      next.attributes.nextSixYearService = sixYearSuggestion.value;
+      setAutofill(next.autofillMeta, "attributes.nextSixYearService", "TEMPLATE", sixYearSuggestion.sourceLabel, sixYearSuggestion.value);
+    }
+  } else if (sixYearRule && !sixYearRule.applicable) {
+    if (priorAutoNextSixYear && next.attributes.nextSixYearService === priorAutoNextSixYear) {
+      next.attributes.nextSixYearService = "";
+    }
+    delete next.autofillMeta["attributes.nextSixYearService"];
+  }
+
+  const hydroSuggestion = getSuggestedExtinguisherNextHydroTest(extinguisherType, next.attributes.lastHydroTest ?? "");
+  const priorAutoHydro = next.autofillMeta["attributes.nextHydroTest"]?.sourceLabel?.includes("interval") ? next.autofillMeta["attributes.nextHydroTest"].sourceValue : "";
+  if (hydroSuggestion) {
+    if (!next.attributes.nextHydroTest || next.attributes.nextHydroTest === priorAutoHydro) {
+      next.attributes.nextHydroTest = hydroSuggestion.value;
+      setAutofill(next.autofillMeta, "attributes.nextHydroTest", "TEMPLATE", hydroSuggestion.sourceLabel, hydroSuggestion.value);
+    }
+  } else if (priorAutoHydro && next.attributes.nextHydroTest === priorAutoHydro) {
+    next.attributes.nextHydroTest = "";
+    delete next.autofillMeta["attributes.nextHydroTest"];
+  }
+
+  next.deviceType = extinguisherType || next.deviceType;
+  return next;
+}
+
 export function createBlankDraftAsset(serviceType: InspectionServiceType): DraftAsset {
   const config = getServiceConfig(serviceType);
-
-  return {
+  const asset = {
     assetName: "",
     location: "",
     assetTag: "",
@@ -120,7 +180,28 @@ export function createBlankDraftAsset(serviceType: InspectionServiceType): Draft
       note: field.helper ?? "",
     })),
     autofillMeta: {},
+  } satisfies DraftAsset;
+
+  return serviceType === "FIRE_EXTINGUISHER" ? applyExtinguisherRules(asset) : asset;
+}
+
+export function duplicateDraftAsset(serviceType: InspectionServiceType, asset: DraftAsset) {
+  const clone: DraftAsset = {
+    ...asset,
+    assetId: undefined,
+    assetTag: "",
+    serialNumber: "",
+    deficiencySummary: "",
+    recommendationText: "",
+    followUpRequired: false,
+    deficiencyTemplateKey: "",
+    status: "PASS",
+    checks: asset.checks.map((check) => ({ ...check, status: "PASS", note: check.note })),
+    attributes: { ...asset.attributes },
+    autofillMeta: { ...asset.autofillMeta },
   };
+
+  return serviceType === "FIRE_EXTINGUISHER" ? applyExtinguisherRules(clone) : clone;
 }
 
 export function buildDraftAssetsFromHistory(serviceType: InspectionServiceType, assets: InspectionAssetLike[]) {
@@ -130,9 +211,7 @@ export function buildDraftAssetsFromHistory(serviceType: InspectionServiceType, 
     const draft = createBlankDraftAsset(serviceType);
     const profileData = asObject(asset.profileData);
     const lastInspection = asObject(asset.lastInspectionData);
-    const lastChecks = Array.isArray(lastInspection.checks)
-      ? (lastInspection.checks as Array<Record<string, unknown>>)
-      : [];
+    const lastChecks = Array.isArray(lastInspection.checks) ? (lastInspection.checks as Array<Record<string, unknown>>) : [];
     const lastAttributes = asObject(lastInspection.attributes);
 
     draft.assetId = asset.id;
@@ -153,17 +232,7 @@ export function buildDraftAssetsFromHistory(serviceType: InspectionServiceType, 
     draft.followUpRequired = Boolean(lastInspection.followUpRequired ?? false);
     draft.deficiencyTemplateKey = String(lastInspection.deficiencyTemplateKey ?? "");
 
-    [
-      "assetName",
-      "location",
-      "assetTag",
-      "deviceType",
-      "manufacturer",
-      "model",
-      "serialNumber",
-      "ulListing",
-      "complianceFrequency",
-    ].forEach((key) => {
+    ["assetName", "location", "assetTag", "deviceType", "manufacturer", "model", "serialNumber", "ulListing", "complianceFrequency"].forEach((key) => {
       setAutofill(draft.autofillMeta, key, "ASSET_RECORD", "Asset record", (draft as unknown as Record<string, string>)[key]);
     });
 
@@ -195,17 +264,13 @@ export function buildDraftAssetsFromHistory(serviceType: InspectionServiceType, 
       };
     });
 
-    return draft;
+    return serviceType === "FIRE_EXTINGUISHER" ? applyExtinguisherRules(draft) : draft;
   });
 }
 
-export function buildDraftReportContext(
-  serviceType: InspectionServiceType,
-  siteName: string,
-  assets: InspectionAssetLike[],
-  technicianName: string
-) {
+export function buildDraftReportContext(serviceType: InspectionServiceType, siteName: string, assets: InspectionAssetLike[], technicianName: string) {
   const config = getServiceConfig(serviceType);
+  const template = getInspectionTemplate(serviceType);
   const today = new Date();
   const nextDate = addMonths(today, config.defaultNextIntervalMonths);
   const draftAssets = buildDraftAssetsFromHistory(serviceType, assets);
@@ -217,7 +282,7 @@ export function buildDraftReportContext(
     nextInspectionDate: toDateInput(nextDate),
     codeReferences: config.codeReferences,
     summary: `${config.title} completed for ${siteName}. Review each ${config.assetLabel.toLowerCase()} below and confirm any follow-up items before finalizing.`,
-    recommendations: ``,
+    recommendations: "",
     assets: draftAssets.length ? draftAssets : [createBlankDraftAsset(serviceType)],
   } satisfies DraftReportContext;
 }
@@ -231,3 +296,4 @@ export function stringifyAutofillSummary(assets: DraftAsset[]) {
     }))
   );
 }
+

@@ -1,4 +1,4 @@
-import { InspectionOutcome, InspectionServiceType, ReportStatus } from "@prisma/client";
+﻿import { InspectionOutcome, InspectionServiceType, ReportStatus } from "@prisma/client";
 
 export type InspectionFieldConfig = {
   key: string;
@@ -38,6 +38,24 @@ export type ServiceWorkflowConfig = {
   deficiencyTemplates: DeficiencyTemplate[];
 };
 
+export type ExtinguisherRuleMatch = {
+  value: string;
+  sourceLabel: string;
+};
+
+type ExtinguisherHydroRule = {
+  intervalYears: number;
+  label: string;
+};
+
+type ExtinguisherSixYearRule = {
+  applicable: boolean;
+  intervalYears?: number;
+  label: string;
+};
+
+const currentYear = new Date().getFullYear();
+
 export const inspectionServiceLabels: Record<InspectionServiceType, string> = {
   FIRE_EXTINGUISHER: "Fire Extinguishers",
   KITCHEN_SUPPRESSION: "Kitchen Suppression",
@@ -69,35 +87,135 @@ export const outcomeTone: Record<InspectionOutcome, string> = {
   NOT_APPLICABLE: "slate",
 };
 
-export const recentInspectionYears = Array.from({ length: 25 }, (_, index) => String(new Date().getFullYear() - index));
+export const recentInspectionYears = Array.from({ length: 25 }, (_, index) => String(currentYear - index));
+export const upcomingInspectionYears = Array.from({ length: 20 }, (_, index) => String(currentYear + index));
+
+export const extinguisherManufacturerOptions = [
+  "Amerex",
+  "Ansul",
+  "Badger",
+  "Buckeye",
+  "First Alert",
+  "Flag Fire",
+  "Globe",
+  "JL Industries",
+  "Kidde",
+  "Larsen's",
+  "Pye-Barker",
+  "Pyro-Chem",
+  "Strike First",
+];
+
+export const extinguisherTypeOptions = ["ABC", "BC", "CO2", "Class K", "Water", "Water Mist"] as const;
+export const extinguisherSizeOptions = ["2.5 lb", "5 lb", "10 lb", "15 lb", "20 lb", "2.5 gal", "6 L"] as const;
 
 const extinguisherUlLookup: Record<string, Record<string, string>> = {
   ABC: {
-    "2.5 LB": "1-A:10-B:C",
-    "5 LB": "3-A:40-B:C",
-    "10 LB": "4-A:80-B:C",
-    "20 LB": "10-A:120-B:C",
+    "2.5 LB": "UL 299 / UL 711 1-A:10-B:C",
+    "5 LB": "UL 299 / UL 711 3-A:40-B:C",
+    "10 LB": "UL 299 / UL 711 4-A:80-B:C",
+    "15 LB": "UL 299 / UL 711 6-A:120-B:C",
+    "20 LB": "UL 299 / UL 711 10-A:120-B:C",
+  },
+  BC: {
+    "5 LB": "UL 299 / UL 711 10-B:C",
+    "10 LB": "UL 299 / UL 711 20-B:C",
+    "20 LB": "UL 299 / UL 711 40-B:C",
+  },
+  CO2: {
+    "5 LB": "UL 154 / UL 711 5-B:C",
+    "10 LB": "UL 154 / UL 711 10-B:C",
+    "15 LB": "UL 154 / UL 711 10-B:C",
+    "20 LB": "UL 154 / UL 711 20-B:C",
   },
   "CLASS K": {
-    "6 L": "Class K",
-    "2.5 GAL": "Class K",
+    "6 L": "UL 8 / UL 711A Class K",
+    "2.5 GAL": "UL 8 / UL 711A Class K",
   },
   WATER: {
-    "2.5 GAL": "2-A",
+    "2.5 GAL": "UL 626 / UL 711 2-A",
   },
   "WATER MIST": {
-    "2.5 GAL": "2-A:C",
+    "2.5 GAL": "UL 2129 / UL 711 2-A:C",
   },
 };
 
-function normalizeExtinguisherValue(value: string) {
+const extinguisherHydroIntervals: Record<string, ExtinguisherHydroRule> = {
+  ABC: { intervalYears: 12, label: "Stored-pressure dry chemical hydro interval" },
+  BC: { intervalYears: 12, label: "Stored-pressure dry chemical hydro interval" },
+  CO2: { intervalYears: 5, label: "CO2 hydro interval" },
+  "CLASS K": { intervalYears: 5, label: "Wet chemical hydro interval" },
+  WATER: { intervalYears: 5, label: "Water extinguisher hydro interval" },
+  "WATER MIST": { intervalYears: 5, label: "Water mist hydro interval" },
+};
+
+const extinguisherSixYearIntervals: Record<string, ExtinguisherSixYearRule> = {
+  ABC: { applicable: true, intervalYears: 6, label: "Stored-pressure dry chemical teardown interval" },
+  BC: { applicable: true, intervalYears: 6, label: "Stored-pressure dry chemical teardown interval" },
+  CO2: { applicable: false, label: "Six-year maintenance is not typically required for CO2 units" },
+  "CLASS K": { applicable: false, label: "Six-year maintenance is not typically required for wet chemical units" },
+  WATER: { applicable: false, label: "Six-year maintenance is not typically required for water units" },
+  "WATER MIST": { applicable: false, label: "Six-year maintenance is not typically required for water mist units" },
+};
+
+export function normalizeExtinguisherValue(value: string) {
   return value.trim().replace(/\s+/g, " ").toUpperCase();
 }
 
-export function getSuggestedExtinguisherUlRating(extinguisherType: string, size: string) {
+function addYearsToYearString(year: string, intervalYears: number) {
+  if (!/^\d{4}$/.test(year)) return "";
+  return String(Number(year) + intervalYears);
+}
+
+export function buildExtinguisherAssetName(extinguisherType: string, size: string) {
+  const pieces = [size.trim(), extinguisherType.trim()].filter(Boolean);
+  return pieces.length ? `${pieces.join(" ")} Extinguisher` : "Untitled Extinguisher";
+}
+
+export function getSuggestedExtinguisherUlRating(extinguisherType: string, size: string): ExtinguisherRuleMatch | null {
   const typeKey = normalizeExtinguisherValue(extinguisherType);
   const sizeKey = normalizeExtinguisherValue(size);
-  return extinguisherUlLookup[typeKey]?.[sizeKey] ?? "";
+  const value = extinguisherUlLookup[typeKey]?.[sizeKey];
+  if (!value) return null;
+
+  return {
+    value,
+    sourceLabel: `${extinguisherType || "Type"} / ${size || "Size"} UL lookup`,
+  };
+}
+
+export function getExtinguisherHydroRule(extinguisherType: string) {
+  return extinguisherHydroIntervals[normalizeExtinguisherValue(extinguisherType)] ?? null;
+}
+
+export function getExtinguisherSixYearRule(extinguisherType: string) {
+  return extinguisherSixYearIntervals[normalizeExtinguisherValue(extinguisherType)] ?? null;
+}
+
+export function getSuggestedExtinguisherNextHydroTest(extinguisherType: string, lastHydroTest: string): ExtinguisherRuleMatch | null {
+  const rule = getExtinguisherHydroRule(extinguisherType);
+  if (!rule) return null;
+
+  const value = addYearsToYearString(lastHydroTest, rule.intervalYears);
+  if (!value) return null;
+
+  return {
+    value,
+    sourceLabel: `${rule.label} from ${lastHydroTest}`,
+  };
+}
+
+export function getSuggestedExtinguisherNextSixYearService(extinguisherType: string, lastSixYearService: string): ExtinguisherRuleMatch | null {
+  const rule = getExtinguisherSixYearRule(extinguisherType);
+  if (!rule?.applicable || !rule.intervalYears) return null;
+
+  const value = addYearsToYearString(lastSixYearService, rule.intervalYears);
+  if (!value) return null;
+
+  return {
+    value,
+    sourceLabel: `${rule.label} from ${lastSixYearService}`,
+  };
 }
 
 export const serviceWorkflows: Record<InspectionServiceType, ServiceWorkflowConfig> = {
@@ -108,13 +226,15 @@ export const serviceWorkflows: Record<InspectionServiceType, ServiceWorkflowConf
     defaultNextIntervalMonths: 12,
     codeReferences: ["NFPA 10"],
     assetLabel: "Extinguisher",
-    summaryHint: "Capture extinguisher readiness, testing milestones, and replacement recommendations.",
+    summaryHint: "Capture extinguisher readiness, due-year milestones, and replacement recommendations with reusable site equipment history.",
     baseFields: ["location", "manufacturer", "ulListing"],
     attributeFields: [
-      { key: "extinguisherType", label: "Extinguisher type", type: "select", options: ["ABC", "BC", "CO2", "Class K", "Water", "Water Mist"] },
-      { key: "size", label: "Size", type: "select", options: ["2.5 lb", "5 lb", "10 lb", "15 lb", "20 lb", "2.5 gal", "6 L"] },
+      { key: "extinguisherType", label: "Extinguisher type", type: "select", options: [...extinguisherTypeOptions] },
+      { key: "size", label: "Size", type: "select", options: [...extinguisherSizeOptions] },
       { key: "lastSixYearService", label: "Last 6-year service", type: "select", options: recentInspectionYears },
+      { key: "nextSixYearService", label: "Next 6-year service", type: "select", options: upcomingInspectionYears },
       { key: "lastHydroTest", label: "Last hydro test", type: "select", options: recentInspectionYears },
+      { key: "nextHydroTest", label: "Next hydro test", type: "select", options: upcomingInspectionYears },
     ],
     checkFields: [
       { key: "sealPin", label: "Seal and pin intact" },
@@ -323,3 +443,4 @@ export function toLegacyInspectionType(serviceType: InspectionServiceType) {
       return "other";
   }
 }
+

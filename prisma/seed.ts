@@ -1,4 +1,4 @@
-import { InspectionOutcome, InspectionServiceType, MembershipRole, PrismaClient, ReportStatus, SubscriptionStatus, TaskPriority, TaskStatus, UserType } from "@prisma/client";
+﻿import { InspectionOutcome, InspectionServiceType, MembershipRole, PrismaClient, ReportStatus, SubscriptionStatus, TaskPriority, TaskStatus, UserType } from "@prisma/client";
 import { hashPassword } from "../lib/password";
 
 const db = new PrismaClient();
@@ -176,7 +176,7 @@ async function main() {
       lastServiceDate: new Date(Date.now() - 1000 * 60 * 60 * 24 * 360),
       nextServiceDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 5),
       defaultCodeReferences: ["NFPA 10"],
-      profileData: { extinguisherType: "ABC", size: "10 lb", lastAnnualService: new Date(Date.now() - 1000 * 60 * 60 * 24 * 360).toISOString().slice(0, 10), lastSixYearService: "2022-03-12", lastHydroTest: "2019-03-12", gaugeStatus: "In range" }
+      profileData: { extinguisherType: "ABC", size: "10 lb", lastSixYearService: "2022", nextSixYearService: "2028", lastHydroTest: "2019", nextHydroTest: "2031" }
     }
   });
 
@@ -237,8 +237,8 @@ async function main() {
       equipmentSummary: [],
       technicianLicense: "NICET II - FA 33812",
       technicianCertification: "State licensed fire alarm inspector",
-      customerSignature: { name: "Avery Collins", signedAt: new Date().toISOString() },
-      technicianSignature: { name: admin.name, signedAt: new Date().toISOString() },
+      customerSignature: { printedName: "Avery Collins", name: "Avery Collins", signedAt: new Date().toISOString() },
+      technicianSignature: { printedName: admin.name, name: admin.name, signedAt: new Date().toISOString() },
       photoUrls: [],
       autoFillSummary: [{ assetName: alarmPanel.name, autoFilledFields: ["manufacturer", "model", "serialNumber"] }],
       finalizedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10),
@@ -315,8 +315,8 @@ async function main() {
       equipmentSummary: [],
       technicianLicense: "IL FAC 09214",
       technicianCertification: "Portable fire extinguisher service technician",
-      customerSignature: { name: "Avery Collins", signedAt: new Date().toISOString() },
-      technicianSignature: { name: admin.name, signedAt: new Date().toISOString() },
+      customerSignature: { printedName: "Avery Collins", name: "Avery Collins", signedAt: new Date().toISOString() },
+      technicianSignature: { printedName: admin.name, name: admin.name, signedAt: new Date().toISOString() },
       photoUrls: [],
       autoFillSummary: [{ assetName: extinguisher.name, autoFilledFields: ["manufacturer", "model", "serialNumber", "attributes.extinguisherType"] }],
       finalizedAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
@@ -344,11 +344,11 @@ async function main() {
       deficiencySummary: "Pressure gauge below the operable range.",
       recommendationText: "Replace or recharge the extinguisher and re-tag after service.",
       followUpRequired: true,
-      attributes: { extinguisherType: "ABC", size: "10 lb", gaugeStatus: "Low", lastAnnualService: "2025-03-14", lastSixYearService: "2022-03-12", lastHydroTest: "2019-03-12" },
+      attributes: { extinguisherType: "ABC", size: "10 lb", lastSixYearService: "2022", nextSixYearService: "2028", lastHydroTest: "2019", nextHydroTest: "2031" },
       testResults: [
         { key: "sealPin", label: "Seal and pin intact", status: "PASS", note: "Seal intact at time of inspection." },
         { key: "physicalDamage", label: "No physical damage or corrosion", status: "PASS", note: "Cabinet and shell in good condition." },
-        { key: "pressure", label: "Pressure / gauge status", status: "ATTENTION", note: "Gauge reading below operable range." }
+        { key: "physicalDamage", label: "No physical damage or corrosion", status: "ATTENTION", note: "Follow-up recommended after low-pressure finding." }
       ],
       codeReferences: ["NFPA 10"],
       appliedTemplateKeys: ["low-pressure"],

@@ -1,52 +1,49 @@
-"use client";
+﻿"use client";
 
 import type { InspectionOutcome, InspectionServiceType } from "@prisma/client";
-import { FileSpreadsheet, ShieldCheck } from "lucide-react";
+import { CopyPlus, FileSpreadsheet, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import type { DraftAsset } from "@/lib/inspection-smart-defaults";
-import { getSuggestedExtinguisherUlRating, type ServiceWorkflowConfig, outcomeLabels } from "@/lib/inspection-config";
+import { applyExtinguisherRules } from "@/lib/inspection-smart-defaults";
+import {
+  extinguisherManufacturerOptions,
+  getExtinguisherHydroRule,
+  getExtinguisherSixYearRule,
+  getSuggestedExtinguisherUlRating,
+  type ServiceWorkflowConfig,
+  outcomeLabels,
+} from "@/lib/inspection-config";
 import { cn } from "@/lib/utils";
 
 function FieldMeta({ meta, currentValue }: { meta?: { sourceLabel: string; sourceValue: string }; currentValue: string }) {
-  if (!meta) {
-    return null;
-  }
-
+  if (!meta) return null;
   const overridden = meta.sourceValue !== currentValue;
   return <p className={cn("mt-1 text-xs", overridden ? "text-amber-700" : "text-slate-500")}>{overridden ? "Overridden" : "Auto-filled"} from {meta.sourceLabel}</p>;
 }
 
 const defaultBaseFields = ["assetName", "location", "assetTag", "deviceType", "manufacturer", "model", "serialNumber", "ulListing", "complianceFrequency"];
 
-function createAutofillMeta(sourceValue: string) {
-  return {
-    sourceType: "TEMPLATE" as const,
-    sourceLabel: "Extinguisher rating lookup",
-    sourceValue,
-  };
+function updateAsset(serviceType: InspectionServiceType, asset: DraftAsset) {
+  return serviceType === "FIRE_EXTINGUISHER" ? applyExtinguisherRules(asset) : asset;
 }
 
-function updateExtinguisherDerivedFields(asset: DraftAsset) {
-  const extinguisherType = asset.attributes.extinguisherType ?? "";
+function renderExtinguisherRuleHint(asset: DraftAsset) {
+  const type = asset.attributes.extinguisherType ?? "";
   const size = asset.attributes.size ?? "";
-  const suggestedUl = getSuggestedExtinguisherUlRating(extinguisherType, size);
-  const nextAsset = {
-    ...asset,
-    deviceType: extinguisherType,
-  };
+  const ulRule = getSuggestedExtinguisherUlRating(type, size);
+  const hydroRule = getExtinguisherHydroRule(type);
+  const sixYearRule = getExtinguisherSixYearRule(type);
 
-  const previousLookupValue = asset.autofillMeta.ulListing?.sourceLabel === "Extinguisher rating lookup" ? asset.autofillMeta.ulListing.sourceValue : "";
-  if (suggestedUl && (!asset.ulListing || asset.ulListing === previousLookupValue)) {
-    nextAsset.ulListing = suggestedUl;
-    nextAsset.autofillMeta = {
-      ...asset.autofillMeta,
-      ulListing: createAutofillMeta(suggestedUl),
-    };
-  }
-
-  return nextAsset;
+  return (
+    <div className="space-y-2 rounded-[1.2rem] border border-slate-200 bg-white p-4 text-sm text-slate-600">
+      <p className="font-semibold text-slate-900">Extinguisher smart defaults</p>
+      <p>{ulRule ? `UL listing rule matched for ${type || "type"} / ${size || "size"}.` : "No UL listing rule matched yet. Select type and size or enter a manual UL listing."}</p>
+      <p>{hydroRule ? `Next hydro uses the ${hydroRule.intervalYears}-year ${hydroRule.label.toLowerCase()}.` : "Hydro interval will appear when a supported extinguisher type is selected."}</p>
+      <p>{sixYearRule?.applicable ? "Six-year service can be suggested from the last 6-year service year." : "Six-year service is optional for this extinguisher type and stays technician-confirmed."}</p>
+    </div>
+  );
 }
 
 export function InspectionAssetCard({
@@ -57,7 +54,8 @@ export function InspectionAssetCard({
   canRemove,
   onRemove,
   onChange,
-  onApplyTemplate
+  onDuplicate,
+  onApplyTemplate,
 }: {
   asset: DraftAsset;
   index: number;
@@ -66,9 +64,11 @@ export function InspectionAssetCard({
   canRemove: boolean;
   onRemove: () => void;
   onChange: (next: DraftAsset) => void;
+  onDuplicate: () => void;
   onApplyTemplate: (templateKey: string) => void;
 }) {
   const baseFields = serviceType === "FIRE_EXTINGUISHER" ? serviceConfig.baseFields ?? ["location", "manufacturer", "ulListing"] : defaultBaseFields;
+  const ulFallbackState = serviceType === "FIRE_EXTINGUISHER" && !getSuggestedExtinguisherUlRating(asset.attributes.extinguisherType ?? "", asset.attributes.size ?? "");
 
   return (
     <div className="rounded-[1.7rem] border border-slate-200/80 bg-white p-5 shadow-sm">
@@ -79,27 +79,53 @@ export function InspectionAssetCard({
         </div>
         <div className="flex items-center gap-2">
           <div className={cn("rounded-full px-3 py-1 text-xs font-semibold", asset.status === "PASS" ? "bg-emerald-50 text-emerald-700" : asset.status === "FAIL" ? "bg-rose-50 text-rose-700" : asset.status === "ATTENTION" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600")}>{outcomeLabels[asset.status]}</div>
+          <Button type="button" variant="ghost" onClick={onDuplicate}><CopyPlus className="mr-2 h-4 w-4" />Duplicate</Button>
           {canRemove ? <Button type="button" variant="ghost" onClick={onRemove}>Remove</Button> : null}
         </div>
       </div>
 
       <div className={cn("mt-5 grid gap-4", serviceType === "FIRE_EXTINGUISHER" ? "md:grid-cols-3" : "md:grid-cols-2 xl:grid-cols-3")}>
-        {baseFields.map((key) => (
-          <div key={key}>
-            <label className="mb-2 block text-sm font-medium capitalize text-slate-700">{key.replace(/([A-Z])/g, " $1")}</label>
-            <Input value={String((asset as unknown as Record<string, string>)[key] ?? "")} onChange={(event) => onChange({ ...asset, [key]: event.currentTarget.value } as DraftAsset)} />
-            <FieldMeta meta={asset.autofillMeta[key]} currentValue={String((asset as unknown as Record<string, string>)[key] ?? "")} />
-          </div>
-        ))}
+        {baseFields.map((key) => {
+          if (serviceType === "FIRE_EXTINGUISHER" && key === "manufacturer") {
+            return (
+              <div key={key}>
+                <label className="mb-2 block text-sm font-medium text-slate-700">Manufacturer</label>
+                <Input list="extinguisher-manufacturers" value={asset.manufacturer} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, manufacturer: event.currentTarget.value }))} placeholder="Search or select manufacturer" />
+                <datalist id="extinguisher-manufacturers">
+                  {extinguisherManufacturerOptions.map((option) => <option key={option} value={option} />)}
+                </datalist>
+              </div>
+            );
+          }
+
+          if (serviceType === "FIRE_EXTINGUISHER" && key === "ulListing") {
+            return (
+              <div key={key}>
+                <label className="mb-2 block text-sm font-medium text-slate-700">UL Listing</label>
+                <Input value={asset.ulListing} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, ulListing: event.currentTarget.value }))} placeholder={ulFallbackState ? "No rule match. Enter listing manually if needed." : "Auto-populates from type + size"} />
+                <FieldMeta meta={asset.autofillMeta.ulListing} currentValue={asset.ulListing} />
+                {ulFallbackState ? <p className="mt-1 text-xs text-slate-500">No matching UL rule found for the selected extinguisher type and size.</p> : null}
+              </div>
+            );
+          }
+
+          return (
+            <div key={key}>
+              <label className="mb-2 block text-sm font-medium capitalize text-slate-700">{key.replace(/([A-Z])/g, " $1")}</label>
+              <Input value={String((asset as unknown as Record<string, string>)[key] ?? "")} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, [key]: event.currentTarget.value } as DraftAsset))} />
+              <FieldMeta meta={asset.autofillMeta[key]} currentValue={String((asset as unknown as Record<string, string>)[key] ?? "")} />
+            </div>
+          );
+        })}
         {serviceType !== "FIRE_EXTINGUISHER" ? (
           <>
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">Last service date</label>
-              <Input type="date" value={asset.lastServiceDate} onChange={(event) => onChange({ ...asset, lastServiceDate: event.currentTarget.value })} />
+              <Input type="date" value={asset.lastServiceDate} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, lastServiceDate: event.currentTarget.value }))} />
             </div>
             <div>
               <label className="mb-2 block text-sm font-medium text-slate-700">Next service date</label>
-              <Input type="date" value={asset.nextServiceDate} onChange={(event) => onChange({ ...asset, nextServiceDate: event.currentTarget.value })} />
+              <Input type="date" value={asset.nextServiceDate} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, nextServiceDate: event.currentTarget.value }))} />
             </div>
           </>
         ) : null}
@@ -118,9 +144,9 @@ export function InspectionAssetCard({
                     onChange={(event) => {
                       const next = {
                         ...asset,
-                        attributes: { ...asset.attributes, [field.key]: event.currentTarget.value }
+                        attributes: { ...asset.attributes, [field.key]: event.currentTarget.value },
                       };
-                      onChange(serviceType === "FIRE_EXTINGUISHER" ? updateExtinguisherDerivedFields(next) : next);
+                      onChange(updateAsset(serviceType, next));
                     }}
                     className="w-full rounded-2xl border border-slate-300/80 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10"
                   >
@@ -128,14 +154,15 @@ export function InspectionAssetCard({
                     {field.options?.map((option) => <option key={option} value={option}>{option}</option>)}
                   </select>
                 ) : field.type === "textarea" ? (
-                  <Textarea value={asset.attributes[field.key] ?? ""} onChange={(event) => onChange({ ...asset, attributes: { ...asset.attributes, [field.key]: event.currentTarget.value } })} placeholder={field.placeholder} />
+                  <Textarea value={asset.attributes[field.key] ?? ""} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, attributes: { ...asset.attributes, [field.key]: event.currentTarget.value } }))} placeholder={field.placeholder} />
                 ) : (
-                  <Input type={field.type === "date" ? "date" : field.type === "number" ? "number" : "text"} value={asset.attributes[field.key] ?? ""} onChange={(event) => onChange({ ...asset, attributes: { ...asset.attributes, [field.key]: event.currentTarget.value } })} placeholder={field.placeholder} />
+                  <Input type={field.type === "date" ? "date" : field.type === "number" ? "number" : "text"} value={asset.attributes[field.key] ?? ""} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, attributes: { ...asset.attributes, [field.key]: event.currentTarget.value } }))} placeholder={field.placeholder} />
                 )}
                 <FieldMeta meta={asset.autofillMeta[`attributes.${field.key}`]} currentValue={asset.attributes[field.key] ?? ""} />
               </div>
             ))}
           </div>
+          {serviceType === "FIRE_EXTINGUISHER" ? <div className="mt-4">{renderExtinguisherRuleHint(asset)}</div> : null}
         </div>
 
         <div className="rounded-[1.4rem] border border-slate-200/80 bg-slate-50/80 p-4">
@@ -148,11 +175,11 @@ export function InspectionAssetCard({
                     <p className="font-medium text-slate-900">{check.label}</p>
                     <FieldMeta meta={asset.autofillMeta[`checks.${check.key}.status`]} currentValue={check.status} />
                   </div>
-                  <select value={check.status} onChange={(event) => onChange({ ...asset, checks: asset.checks.map((item) => item.key === check.key ? { ...item, status: event.currentTarget.value as InspectionOutcome } : item) })} className="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10">
+                  <select value={check.status} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, checks: asset.checks.map((item) => item.key === check.key ? { ...item, status: event.currentTarget.value as InspectionOutcome } : item) }))} className="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10">
                     {Object.entries(outcomeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
                   </select>
                 </div>
-                <Textarea className="mt-3 min-h-24" value={check.note} onChange={(event) => onChange({ ...asset, checks: asset.checks.map((item) => item.key === check.key ? { ...item, note: event.currentTarget.value } : item) })} placeholder="Field notes, readings, and observations." />
+                <Textarea className="mt-3 min-h-24" value={check.note} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, checks: asset.checks.map((item) => item.key === check.key ? { ...item, note: event.currentTarget.value } : item) }))} placeholder="Field notes, readings, and observations." />
               </div>
             ))}
           </div>
@@ -173,23 +200,23 @@ export function InspectionAssetCard({
         <div className="mt-4 grid gap-4 xl:grid-cols-2">
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">Deficiency summary</label>
-            <Textarea value={asset.deficiencySummary} onChange={(event) => onChange({ ...asset, deficiencySummary: event.currentTarget.value })} placeholder="Describe the deficiency clearly and professionally." />
+            <Textarea value={asset.deficiencySummary} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, deficiencySummary: event.currentTarget.value }))} placeholder="Describe the deficiency clearly and professionally." />
           </div>
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">Recommendation</label>
-            <Textarea value={asset.recommendationText} onChange={(event) => onChange({ ...asset, recommendationText: event.currentTarget.value })} placeholder="Recommended corrective action or follow-up scope." />
+            <Textarea value={asset.recommendationText} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, recommendationText: event.currentTarget.value }))} placeholder="Recommended corrective action or follow-up scope." />
           </div>
         </div>
         <div className="mt-4 grid gap-4 md:grid-cols-3">
           <div>
             <label className="mb-2 block text-sm font-medium text-slate-700">Asset result</label>
-            <select value={asset.status} onChange={(event) => onChange({ ...asset, status: event.currentTarget.value as InspectionOutcome })} className="w-full rounded-2xl border border-slate-300/80 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10">
+            <select value={asset.status} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, status: event.currentTarget.value as InspectionOutcome }))} className="w-full rounded-2xl border border-slate-300/80 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-brand focus:ring-4 focus:ring-brand/10">
               {Object.entries(outcomeLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
             </select>
           </div>
           <div className="md:col-span-2 flex items-end">
             <label className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-              <input type="checkbox" checked={asset.followUpRequired} onChange={(event) => onChange({ ...asset, followUpRequired: event.currentTarget.checked })} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand" />
+              <input type="checkbox" checked={asset.followUpRequired} onChange={(event) => onChange(updateAsset(serviceType, { ...asset, followUpRequired: event.currentTarget.checked }))} className="h-4 w-4 rounded border-slate-300 text-brand focus:ring-brand" />
               Follow-up / repair recommended
             </label>
           </div>
@@ -198,3 +225,4 @@ export function InspectionAssetCard({
     </div>
   );
 }
+
