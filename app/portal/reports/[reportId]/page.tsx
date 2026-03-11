@@ -1,8 +1,9 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { canViewInspectionReport } from "@/lib/portal";
+import { inspectionServiceLabels } from "@/lib/inspection-templates";
 import { db } from "@/lib/db";
 import { requireCustomerUser } from "@/lib/session";
 import { formatDate } from "@/lib/utils";
@@ -21,17 +22,24 @@ type ReportDeficiency = {
   due_date?: string;
 };
 
+type EquipmentRow = {
+  category?: string;
+  quantity?: string;
+  notes?: string;
+};
+
 export default async function PortalReportDetailPage({ params }: { params: Promise<{ reportId: string }> }) {
   const { reportId } = await params;
   const user = await requireCustomerUser();
   const report = await db.inspectionReport.findUnique({ where: { id: reportId } });
 
-  if (!report || !canViewInspectionReport(user.userType, user.clientId, report.clientId)) {
+  if (!report || report.status === "DRAFT" || !canViewInspectionReport(user.userType, user.clientId, report.clientId)) {
     notFound();
   }
 
   const checklistItems = (report.checklistItems as ReportChecklistItem[] | null) ?? [];
   const deficiencies = (report.deficiencies as ReportDeficiency[] | null) ?? [];
+  const equipmentSummary = (report.equipmentSummary as EquipmentRow[] | null) ?? [];
 
   return (
     <main className="mx-auto min-h-screen max-w-6xl px-4 py-6 sm:px-6 sm:py-10">
@@ -56,14 +64,21 @@ export default async function PortalReportDetailPage({ params }: { params: Promi
               <p className="text-sm text-slate-500">Inspection details</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <Badge value={report.status} />
-                <Badge value={report.inspectionType.replace(/\s+/g, "_").toUpperCase()} />
+                <Badge value={report.serviceType} />
               </div>
             </div>
             <div>
               <p className="text-sm text-slate-500">Completed</p>
               <p className="mt-2 font-medium text-slate-900">{formatDate(report.completedAt)}</p>
               <p className="mt-1 text-sm text-slate-600">Inspector: {report.inspectorName ?? "Not recorded"}</p>
+              <p className="mt-1 text-sm text-slate-500">Next due {formatDate(report.nextInspectionDate)}</p>
             </div>
+          </div>
+          <div className="mt-6 rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
+            <p className="text-sm font-semibold text-slate-900">Service type</p>
+            <p className="mt-2 text-sm leading-7 text-slate-600">{inspectionServiceLabels[report.serviceType]}</p>
+            {report.frequencyLabel ? <p className="mt-2 text-sm text-slate-500">Frequency: {report.frequencyLabel}</p> : null}
+            {report.pointOfContact ? <p className="mt-1 text-sm text-slate-500">Point of contact: {report.pointOfContact}</p> : null}
           </div>
           {report.notes ? (
             <div className="mt-6 rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-5">
@@ -74,6 +89,21 @@ export default async function PortalReportDetailPage({ params }: { params: Promi
         </Card>
 
         <div className="space-y-6">
+          {equipmentSummary.length ? (
+            <Card className="glass-panel-strong">
+              <h2 className="text-xl font-semibold text-slate-900">Equipment summary</h2>
+              <div className="mt-4 space-y-4">
+                {equipmentSummary.map((item, index) => (
+                  <div key={`${item.category ?? "equipment"}-${index}`} className="rounded-[1.5rem] border border-slate-200/80 bg-white/80 p-4">
+                    <p className="font-medium text-slate-900">{item.category ?? "Equipment"}</p>
+                    <p className="mt-2 text-sm text-slate-600">Quantity: {item.quantity || "Not recorded"}</p>
+                    {item.notes ? <p className="mt-2 text-sm leading-6 text-slate-600">{item.notes}</p> : null}
+                  </div>
+                ))}
+              </div>
+            </Card>
+          ) : null}
+
           {checklistItems.length ? (
             <Card className="glass-panel-strong">
               <h2 className="text-xl font-semibold text-slate-900">Checklist items</h2>
@@ -85,7 +115,7 @@ export default async function PortalReportDetailPage({ params }: { params: Promi
                         <p className="font-medium text-slate-900">{item.item ?? "Checklist item"}</p>
                         {item.notes ? <p className="mt-2 text-sm leading-6 text-slate-600">{item.notes}</p> : null}
                       </div>
-                      <Badge value={(item.status ?? "unknown").toUpperCase()} />
+                      <Badge value={(item.status ?? "UNKNOWN").toUpperCase()} />
                     </div>
                   </div>
                 ))}
@@ -116,3 +146,4 @@ export default async function PortalReportDetailPage({ params }: { params: Promi
     </main>
   );
 }
+

@@ -1,4 +1,4 @@
-# TradeWorx
+﻿# TradeWorx
 
 TradeWorx is a production-oriented SaaS app for small teams that need marketing pages, authentication, project management, task tracking, invites, analytics, subscription billing, and a secure customer portal for inspection reports in one Next.js codebase.
 
@@ -29,7 +29,7 @@ TradeWorx is a production-oriented SaaS app for small teams that need marketing 
 - Marketing site: `/`
 - Team auth: `/login`, `/signup`
 - Customer auth: `/portal/login`
-- Team app: `/dashboard`, `/projects`, `/board`, `/analytics`, `/team`, `/settings`, `/billing`
+- Team app: `/dashboard`, `/projects`, `/board`, `/inspections`, `/analytics`, `/team`, `/settings`, `/billing`
 - Customer portal: `/portal/reports`, `/portal/reports/[reportId]`
 - Billing/webhooks: `/api/billing/checkout`, `/api/billing/portal`, `/api/stripe/webhook`
 - Auth callbacks: `/api/auth/[...nextauth]`
@@ -183,4 +183,14 @@ Run unit tests with:
 ```bash
 npm test
 ```
+
+
+
+## Inspection module
+
+- Internal workspace route: /inspections`r
+- Supported templates: fire extinguisher, kitchen suppression, fire alarm, emergency/exit lighting, fire sprinkler, backflow, and other custom service work
+- Reports are team-scoped, tied to a client account, and can be saved as draft, issued, invoiced, or archived
+- Customer portal only exposes non-draft reports for the signed-in client
+- New migration: prisma/migrations/20260311112000_inspections_module/migration.sql`r
 

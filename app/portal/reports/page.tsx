@@ -1,9 +1,10 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Button } from "@/components/ui/button";
 import { logoutAction } from "@/lib/actions/auth";
+import { inspectionServiceLabels } from "@/lib/inspection-templates";
 import { db } from "@/lib/db";
 import { requireCustomerUser } from "@/lib/session";
 import { formatDate } from "@/lib/utils";
@@ -12,7 +13,12 @@ export default async function PortalReportsPage() {
   const user = await requireCustomerUser();
   const clientId = user.clientId as string;
   const reports = await db.inspectionReport.findMany({
-    where: { clientId },
+    where: {
+      clientId,
+      status: {
+        in: ["ISSUED", "INVOICED", "ARCHIVED"]
+      }
+    },
     orderBy: { completedAt: "desc" }
   });
 
@@ -52,11 +58,11 @@ export default async function PortalReportsPage() {
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Badge value={report.status} />
-                    <Badge value={report.inspectionType.replace(/\s+/g, "_").toUpperCase()} />
+                    <Badge value={report.serviceType} />
                   </div>
                 </div>
                 <div className="mt-5 flex flex-col gap-4 border-t border-slate-200/80 pt-5 sm:flex-row sm:items-center sm:justify-between">
-                  <p className="text-sm text-slate-600">Inspector: {report.inspectorName ?? "Not recorded"}</p>
+                  <p className="text-sm text-slate-600">Inspector: {report.inspectorName ?? "Not recorded"} · {inspectionServiceLabels[report.serviceType]}</p>
                   <Link href={`/portal/reports/${report.id}`} className="inline-flex items-center justify-center rounded-full bg-brand px-5 py-3 text-sm font-semibold text-white shadow-[0_12px_30px_rgba(15,118,110,0.28)] transition hover:-translate-y-0.5 hover:bg-brand-dark">
                     View report
                   </Link>
@@ -71,3 +77,4 @@ export default async function PortalReportsPage() {
     </main>
   );
 }
+

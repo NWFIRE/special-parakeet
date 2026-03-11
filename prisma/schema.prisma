@@ -48,6 +48,16 @@ enum ReportStatus {
   ARCHIVED
 }
 
+enum InspectionServiceType {
+  FIRE_EXTINGUISHER
+  KITCHEN_SUPPRESSION
+  FIRE_ALARM
+  EMERGENCY_EXIT_LIGHTING
+  FIRE_SPRINKLER
+  BACKFLOW
+  OTHER
+}
+
 model User {
   id            String       @id @default(cuid())
   name          String?
@@ -69,45 +79,64 @@ model User {
 
 model Client {
   id            String             @id @default(cuid())
+  teamId        String
   companyName   String
   contactName   String?
   contactEmail  String?
+  contactPhone  String?
+  siteCount     Int?
+  notes         String?
+  team          Team               @relation(fields: [teamId], references: [id], onDelete: Cascade)
   users         User[]
   reports       InspectionReport[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
+
+  @@index([teamId, companyName])
 }
 
 model InspectionReport {
-  id              String       @id @default(cuid())
-  clientId        String
-  title           String
-  inspectionType  String
-  status          ReportStatus @default(ISSUED)
-  propertyName    String
-  propertyAddress String?
-  inspectorName   String?
-  completedAt     DateTime?
-  notes           String?
-  checklistItems  Json?
-  deficiencies    Json?
-  pdfUrl          String?
-  client          Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  createdAt       DateTime     @default(now())
-  updatedAt       DateTime     @updatedAt
+  id                 String                @id @default(cuid())
+  teamId             String
+  clientId           String
+  title              String
+  reportNumber       String?
+  serviceType        InspectionServiceType
+  status             ReportStatus          @default(DRAFT)
+  propertyName       String
+  propertyAddress    String?
+  inspectorName      String?
+  pointOfContact     String?
+  frequencyLabel     String?
+  completedAt        DateTime?
+  nextInspectionDate DateTime?
+  notes              String?
+  checklistItems     Json?
+  deficiencies       Json?
+  equipmentSummary   Json?
+  pdfUrl             String?
+  team               Team                  @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  client             Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  createdAt          DateTime              @default(now())
+  updatedAt          DateTime              @updatedAt
+
+  @@index([teamId, status, completedAt])
+  @@index([clientId, status, completedAt])
 }
 
 model Team {
-  id           String         @id @default(cuid())
+  id           String             @id @default(cuid())
   name         String
-  slug         String         @unique
+  slug         String             @unique
   memberships  Membership[]
   projects     Project[]
   invites      Invite[]
   tasks        Task[]
+  clients      Client[]
+  reports      InspectionReport[]
   subscription Subscription?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
 }
 
 model Membership {
@@ -214,3 +243,4 @@ model VerificationToken {
 
   @@id([identifier, token])
 }
+

@@ -1,4 +1,4 @@
-import { db } from "@/lib/db";
+﻿import { db } from "@/lib/db";
 
 export async function getDashboardData(teamId: string) {
   return db.membership.findFirst({
@@ -27,9 +27,29 @@ export async function getDashboardData(teamId: string) {
               }
             }
           },
+          clients: {
+            orderBy: {
+              companyName: "asc"
+            }
+          },
+          reports: {
+            include: {
+              client: true
+            },
+            orderBy: [
+              {
+                completedAt: "desc"
+              },
+              {
+                createdAt: "desc"
+              }
+            ],
+            take: 5
+          },
           subscription: true
         }
       }
     }
   });
 }
+

@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, CreditCard, FolderKanban, LayoutDashboard, KanbanSquare, Settings, Users2 } from "lucide-react";
+import { BarChart3, ClipboardList, CreditCard, FolderKanban, LayoutDashboard, KanbanSquare, Settings, Users2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { LogoutButton } from "@/components/layout/logout-button";
 import { WorkspaceSwitcher } from "@/components/layout/workspace-switcher";
@@ -12,6 +12,7 @@ const links = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/projects", label: "Projects", icon: FolderKanban },
   { href: "/board", label: "Kanban board", icon: KanbanSquare },
+  { href: "/inspections", label: "Inspections", icon: ClipboardList },
   { href: "/analytics", label: "Analytics", icon: BarChart3 },
   { href: "/team", label: "Team", icon: Users2 },
   { href: "/billing", label: "Billing", icon: CreditCard },
@@ -41,7 +42,7 @@ export function AppSidebar({
       </div>
       <nav className="mt-6 space-y-2">
         {links.map(({ href, label, icon: Icon }) => {
-          const active = pathname === href || (href === "/projects" && pathname.startsWith("/projects/"));
+          const active = pathname === href || (href === "/projects" && pathname.startsWith("/projects/")) || (href === "/inspections" && pathname.startsWith("/inspections"));
           return (
             <Link
               key={href}
