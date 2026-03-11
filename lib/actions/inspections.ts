@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { InspectionServiceType, ReportStatus } from "@prisma/client";
 import { db } from "@/lib/db";
-import { getInspectionTemplate } from "@/lib/inspection-templates";
+import { getInspectionTemplate, toLegacyInspectionType } from "@/lib/inspection-templates";
 import { canEditProjects } from "@/lib/permissions";
 import { requireWorkspaceMembership } from "@/lib/session";
 import { clientSchema, inspectionReportSchema, parseChecklistItems, parseDeficiencies, parseEquipmentSummary } from "@/lib/validations/inspections";
@@ -266,3 +266,4 @@ export async function updateInspectionStatusAction(reportId: string, teamId: str
   revalidatePath(`/inspections/${reportId}`);
   revalidatePath("/portal/reports");
 }
+

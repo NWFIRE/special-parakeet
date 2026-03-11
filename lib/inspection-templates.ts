@@ -103,18 +103,12 @@ export const inspectionTemplates: Record<InspectionServiceType, { frequencyLabel
       { item: "Check valve #2 differential", status: "PASS", notes: "Record pressure differential." },
       { item: "Assembly and shutoff valves condition", status: "PASS", notes: "Inspect for leaks and proper tagging." }
     ],
-    equipmentSummary: [
-      { category: "Backflow assemblies", quantity: "", notes: "" }
-    ]
+    equipmentSummary: [{ category: "Backflow assemblies", quantity: "", notes: "" }]
   },
   OTHER: {
     frequencyLabel: "Custom",
-    checklistItems: [
-      { item: "General inspection complete", status: "PASS", notes: "Document the custom service scope performed." }
-    ],
-    equipmentSummary: [
-      { category: "Equipment serviced", quantity: "", notes: "" }
-    ]
+    checklistItems: [{ item: "General inspection complete", status: "PASS", notes: "Document the custom service scope performed." }],
+    equipmentSummary: [{ category: "Equipment serviced", quantity: "", notes: "" }]
   }
 };
 
@@ -126,3 +120,21 @@ export function toPrettyInspectionType(serviceType: InspectionServiceType | stri
   return inspectionServiceLabels[serviceType as InspectionServiceType] ?? String(serviceType).replaceAll("_", " ").toLowerCase();
 }
 
+export function toLegacyInspectionType(serviceType: InspectionServiceType) {
+  switch (serviceType) {
+    case "FIRE_EXTINGUISHER":
+      return "fire_extinguisher";
+    case "KITCHEN_SUPPRESSION":
+      return "kitchen_suppression";
+    case "FIRE_ALARM":
+      return "fire_alarm";
+    case "EMERGENCY_EXIT_LIGHTING":
+      return "emergency_exit_lighting";
+    case "FIRE_SPRINKLER":
+      return "wet_sprinkler";
+    case "BACKFLOW":
+      return "backflow";
+    default:
+      return "other";
+  }
+}
