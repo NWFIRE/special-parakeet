@@ -1,5 +1,5 @@
 {
-  "name": "taskflow",
+  "name": "tradeworx",
   "private": true,
   "version": "1.0.0",
   "engines": {
@@ -60,3 +60,4 @@
     "vitest": "^3.0.8"
   }
 }
+

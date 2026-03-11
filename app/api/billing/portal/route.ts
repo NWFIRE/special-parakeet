@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
-import { stripe } from "@/lib/stripe";
-import { getCurrentUser } from "@/lib/session";
+import { isStripeConfigured } from "@/lib/billing";
 import { canManageBilling } from "@/lib/permissions";
+import { getActiveWorkspaceMembership, getCurrentUser } from "@/lib/session";
+import { stripe } from "@/lib/stripe";
 import { getBaseUrl } from "@/lib/utils";
 
 export async function POST() {
-  if (!stripe) {
-    return NextResponse.json({ error: "Stripe is not configured." }, { status: 500 });
+  if (!stripe || !isStripeConfigured()) {
+    return NextResponse.json({ error: "Stripe billing is not configured yet." }, { status: 503 });
   }
 
   const user = await getCurrentUser();
@@ -15,7 +16,7 @@ export async function POST() {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
-  const membership = user.memberships[0];
+  const membership = await getActiveWorkspaceMembership(user);
 
   if (!membership || !canManageBilling(membership.role)) {
     return NextResponse.json({ error: "Only workspace owners can manage billing." }, { status: 403 });

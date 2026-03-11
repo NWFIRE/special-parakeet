@@ -1,6 +1,6 @@
-# TaskFlow
+# TradeWorx
 
-TaskFlow is a production-oriented SaaS starter for small teams that need marketing pages, authentication, project management, task tracking, invites, analytics, subscription billing, and a secure customer portal for inspection reports in one Next.js codebase.
+TradeWorx is a production-oriented SaaS app for small teams that need marketing pages, authentication, project management, task tracking, invites, analytics, subscription billing, and a secure customer portal for inspection reports in one Next.js codebase.
 
 ## Stack
 
@@ -105,11 +105,11 @@ If you use Vercel Postgres or Neon, this separation is the safest default for `p
 
 - `DATABASE_URL`
   Purpose: Prisma runtime database connection
-  Example: `postgresql://USER:PASSWORD@HOST:5432/taskflow?sslmode=require`
+  Example: `postgresql://USER:PASSWORD@HOST:5432/tradeworx?sslmode=require`
 
 - `DIRECT_URL`
   Purpose: Prisma direct connection for `prisma migrate deploy`
-  Example: `postgresql://USER:PASSWORD@HOST:5432/taskflow?sslmode=require`
+  Example: `postgresql://USER:PASSWORD@HOST:5432/tradeworx?sslmode=require`
 
 - `NEXTAUTH_SECRET`
   Purpose: session and JWT signing secret
@@ -122,6 +122,8 @@ If you use Vercel Postgres or Neon, this separation is the safest default for `p
 - `NEXT_PUBLIC_APP_URL`
   Purpose: public base URL used for redirect links and invite URLs
   Example: `https://app.yourdomain.com`
+
+### Required only when Stripe billing is enabled
 
 - `STRIPE_SECRET_KEY`
   Purpose: server-side Stripe API access
@@ -149,10 +151,10 @@ If these two Google variables are omitted, email/password auth still works and t
 
 After `npm run prisma:seed`, you can sign in with:
 
-- Owner: `owner@taskflow.dev` / `Password123!`
-- Admin: `admin@taskflow.dev` / `Password123!`
-- Member: `member@taskflow.dev` / `Password123!`
-- Customer portal: `client@taskflow.dev` / `Password123!`
+- Owner: `owner@tradeworx.dev` / `Password123!`
+- Admin: `admin@tradeworx.dev` / `Password123!`
+- Member: `member@tradeworx.dev` / `Password123!`
+- Customer portal: `client@tradeworx.dev` / `Password123!`
 
 ## Customer portal
 
@@ -162,9 +164,10 @@ After `npm run prisma:seed`, you can sign in with:
 
 ## Stripe notes
 
+- Billing actions always follow the user's active workspace selection.
 - Checkout and billing portal buttons are wired to server-side Stripe route handlers.
 - Billing actions are owner-only.
-- The webhook route updates subscription state from Stripe events.
+- The webhook route updates subscription state and renewal dates from Stripe events.
 - You must create a Stripe product and recurring price, then place the price id into `STRIPE_PRICE_ID`.
 
 ## Assumptions
@@ -180,3 +183,4 @@ Run unit tests with:
 ```bash
 npm test
 ```
+

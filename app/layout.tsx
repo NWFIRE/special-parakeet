@@ -8,8 +8,8 @@ const bodyFont = Inter({ subsets: ["latin"], variable: "--font-body" });
 const displayFont = Space_Grotesk({ subsets: ["latin"], variable: "--font-display" });
 
 export const metadata: Metadata = {
-  title: "TaskFlow",
-  description: "TaskFlow is a lightweight SaaS for small teams to plan, assign, and ship work together."
+  title: "TradeWorx",
+  description: "TradeWorx helps teams manage projects, inspections, clients, and billing in one polished workspace."
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -21,3 +21,4 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     </html>
   );
 }
+

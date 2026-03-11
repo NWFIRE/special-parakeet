@@ -1,17 +1,14 @@
 import { NextResponse } from "next/server";
+import { isStripeConfigured } from "@/lib/billing";
 import { db } from "@/lib/db";
-import { stripe } from "@/lib/stripe";
-import { getCurrentUser } from "@/lib/session";
 import { canManageBilling } from "@/lib/permissions";
+import { getActiveWorkspaceMembership, getCurrentUser } from "@/lib/session";
+import { stripe } from "@/lib/stripe";
 import { getBaseUrl } from "@/lib/utils";
 
 export async function POST() {
-  if (!stripe) {
-    return NextResponse.json({ error: "Stripe is not configured." }, { status: 500 });
-  }
-
-  if (!process.env.STRIPE_PRICE_ID) {
-    return NextResponse.json({ error: "Stripe price id is not configured." }, { status: 500 });
+  if (!stripe || !isStripeConfigured()) {
+    return NextResponse.json({ error: "Stripe billing is not configured yet." }, { status: 503 });
   }
 
   const user = await getCurrentUser();
@@ -20,7 +17,7 @@ export async function POST() {
     return NextResponse.json({ error: "Authentication required." }, { status: 401 });
   }
 
-  const membership = user.memberships[0];
+  const membership = await getActiveWorkspaceMembership(user);
 
   if (!membership || !canManageBilling(membership.role)) {
     return NextResponse.json({ error: "Only workspace owners can manage billing." }, { status: 403 });
@@ -33,7 +30,7 @@ export async function POST() {
         await stripe.customers.create({
           email: user.email ?? undefined,
           name: membership.team.name,
-          metadata: { teamId: membership.teamId }
+          metadata: { teamId: membership.teamId, workspaceName: membership.team.name }
         })
       ).id;
 
@@ -42,10 +39,12 @@ export async function POST() {
     create: {
       teamId: membership.teamId,
       stripeCustomerId: customer,
+      stripePriceId: process.env.STRIPE_PRICE_ID,
       status: "TRIALING"
     },
     update: {
-      stripeCustomerId: customer
+      stripeCustomerId: customer,
+      stripePriceId: process.env.STRIPE_PRICE_ID
     }
   });
 
@@ -53,6 +52,8 @@ export async function POST() {
     mode: "subscription",
     customer,
     line_items: [{ price: process.env.STRIPE_PRICE_ID, quantity: 1 }],
+    allow_promotion_codes: true,
+    billing_address_collection: "auto",
     success_url: `${getBaseUrl()}/billing?success=1`,
     cancel_url: `${getBaseUrl()}/billing?canceled=1`,
     metadata: { teamId: membership.teamId, initiatedByUserId: user.id }

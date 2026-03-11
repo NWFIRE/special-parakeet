@@ -19,15 +19,15 @@ async function main() {
   const owner = await db.user.create({
     data: {
       name: "Sarah Chen",
-      email: "owner@taskflow.dev",
+      email: "owner@tradeworx.dev",
       passwordHash: await hashPassword("Password123!"),
       memberships: {
         create: {
           role: MembershipRole.OWNER,
           team: {
             create: {
-              name: "TaskFlow Demo",
-              slug: "taskflow-demo",
+              name: "TradeWorx Demo",
+              slug: "tradeworx-demo",
               subscription: {
                 create: {
                   status: SubscriptionStatus.ACTIVE,
@@ -49,7 +49,7 @@ async function main() {
   const admin = await db.user.create({
     data: {
       name: "Jordan Rivera",
-      email: "admin@taskflow.dev",
+      email: "admin@tradeworx.dev",
       passwordHash: await hashPassword("Password123!"),
       memberships: {
         create: {
@@ -63,7 +63,7 @@ async function main() {
   const member = await db.user.create({
     data: {
       name: "Casey Moore",
-      email: "member@taskflow.dev",
+      email: "member@tradeworx.dev",
       passwordHash: await hashPassword("Password123!"),
       memberships: {
         create: {
@@ -78,14 +78,14 @@ async function main() {
     data: {
       companyName: "North Ridge Properties",
       contactName: "Avery Collins",
-      contactEmail: "client@taskflow.dev"
+      contactEmail: "client@tradeworx.dev"
     }
   });
 
   await db.user.create({
     data: {
       name: "Avery Collins",
-      email: "client@taskflow.dev",
+      email: "client@tradeworx.dev",
       passwordHash: await hashPassword("Password123!"),
       userType: UserType.CUSTOMER,
       clientId: client.id
@@ -154,7 +154,7 @@ async function main() {
 
   await db.invite.create({
     data: {
-      email: "newhire@taskflow.dev",
+      email: "newhire@tradeworx.dev",
       role: MembershipRole.MEMBER,
       token: "demo-invite-token",
       teamId,
@@ -212,3 +212,5 @@ main()
     await db.$disconnect();
     process.exit(1);
   });
+
+

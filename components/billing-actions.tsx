@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
-export function BillingActions() {
+type BillingActionsProps = {
+  stripeConfigured: boolean;
+};
+
+export function BillingActions({ stripeConfigured }: BillingActionsProps) {
   const [loading, setLoading] = useState<"checkout" | "portal" | null>(null);
   const [error, setError] = useState("");
 
@@ -28,12 +32,13 @@ export function BillingActions() {
 
   return (
     <div className="flex flex-wrap gap-3">
-      <Button onClick={() => launch("/api/billing/checkout", "checkout")} disabled={loading !== null}>
+      <Button onClick={() => launch("/api/billing/checkout", "checkout")} disabled={loading !== null || !stripeConfigured}>
         {loading === "checkout" ? "Opening checkout..." : "Start subscription"}
       </Button>
-      <Button variant="secondary" onClick={() => launch("/api/billing/portal", "portal")} disabled={loading !== null}>
+      <Button variant="secondary" onClick={() => launch("/api/billing/portal", "portal")} disabled={loading !== null || !stripeConfigured}>
         {loading === "portal" ? "Opening portal..." : "Open billing portal"}
       </Button>
+      {!stripeConfigured ? <p className="basis-full text-sm text-slate-500">Add Stripe configuration in Vercel to enable billing actions.</p> : null}
       {error ? <p className="basis-full text-sm text-rose-600">{error}</p> : null}
     </div>
   );

@@ -6,7 +6,7 @@ import type { Membership, MembershipRole, Team, Subscription, User, Client } fro
 import { hasRequiredRole } from "@/lib/permissions";
 import { resolveActiveMembership } from "@/lib/workspace";
 
-export const ACTIVE_WORKSPACE_COOKIE = "taskflow-active-workspace";
+export const ACTIVE_WORKSPACE_COOKIE = "tradeworx-active-workspace";
 
 type CurrentUser = User & {
   client: Client | null;
@@ -89,3 +89,4 @@ export async function requireWorkspaceMembership(teamId?: string, minimumRole?: 
 
   return { user, membership };
 }
+

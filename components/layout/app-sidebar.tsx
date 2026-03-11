@@ -34,7 +34,7 @@ export function AppSidebar({
   return (
     <aside className="glass-panel-strong flex h-full flex-col overflow-hidden rounded-[2rem] bg-slate-950/96 p-5 text-white">
       <div className="rounded-[1.5rem] border border-white/10 bg-white/5 p-4">
-        <p className="font-display text-2xl font-bold tracking-tight">TaskFlow</p>
+        <p className="font-display text-2xl font-bold tracking-tight">TradeWorx</p>
         <p className="mt-4 text-sm text-slate-400">{teamName}</p>
         <Badge value={role} className="mt-3" />
         <WorkspaceSwitcher memberships={memberships} activeTeamId={activeTeamId} />
@@ -63,3 +63,4 @@ export function AppSidebar({
     </aside>
   );
 }
+

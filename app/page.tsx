@@ -29,14 +29,14 @@ const tiers = [
 const faqs = [
   {
     question: "Can clients log in to see inspection reports?",
-    answer: "Yes. TaskFlow includes a dedicated customer portal where client accounts can securely review previously published inspection reports."
+    answer: "Yes. TradeWorx includes a dedicated customer portal where client accounts can securely review previously published inspection reports."
   },
   {
     question: "Does billing start immediately?",
     answer: "Billing begins when the owner starts a Stripe Checkout session and the webhook confirms the subscription."
   },
   {
-    question: "Is TaskFlow mobile-friendly?",
+    question: "Is TradeWorx mobile-friendly?",
     answer: "Yes. The dashboard, board, and customer report views are designed to work cleanly on phones and tablets."
   }
 ];
@@ -56,7 +56,7 @@ export default async function MarketingPage() {
     <main className="mx-auto flex min-h-screen max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-10">
       <header className="glass-panel-strong mb-10 flex flex-col gap-4 rounded-[2rem] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
         <Link href="/" className="font-display text-2xl font-semibold tracking-tight text-brand-dark">
-          TaskFlow
+          TradeWorx
         </Link>
         <nav className="flex flex-wrap items-center gap-2 text-sm font-medium text-slate-700">
           <Link href="/portal/login" className="rounded-full px-3 py-2 transition hover:bg-white/70 hover:text-brand-dark">
@@ -86,7 +86,7 @@ export default async function MarketingPage() {
                 Team operations software that actually feels composed.
               </h1>
               <p className="max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-                TaskFlow brings projects, tasks, invites, customer reports, analytics, and billing into one calm workspace your team can trust from day one.
+                TradeWorx brings projects, tasks, invites, customer reports, analytics, and billing into one calm workspace your team can trust from day one.
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row">
@@ -215,3 +215,4 @@ export default async function MarketingPage() {
     </main>
   );
 }
+

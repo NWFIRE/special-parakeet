@@ -1,8 +1,11 @@
 import Stripe from "stripe";
 import { headers } from "next/headers";
 import { NextResponse } from "next/server";
+import { isStripeWebhookConfigured } from "@/lib/billing";
 import { db } from "@/lib/db";
 import { stripe } from "@/lib/stripe";
+
+export const runtime = "nodejs";
 
 function mapStripeStatus(status: Stripe.Subscription.Status) {
   switch (status) {
@@ -26,25 +29,26 @@ async function syncSubscriptionFromStripe(stripeSubscriptionId: string, stripeCu
 
   const subscription = await stripe.subscriptions.retrieve(stripeSubscriptionId);
   const stripePriceId = subscription.items.data[0]?.price?.id ?? null;
+  const currentPeriodEndUnix = (subscription as Stripe.Subscription & { current_period_end?: number | null }).current_period_end ?? subscription.trial_end ?? null;
 
   await db.subscription.updateMany({
     where: {
-      OR: [
-        { stripeSubscriptionId: subscription.id },
-        ...(stripeCustomerId ? [{ stripeCustomerId }] : [])
-      ]
+      OR: [{ stripeSubscriptionId: subscription.id }, ...(stripeCustomerId ? [{ stripeCustomerId }] : [])]
     },
     data: {
       stripeCustomerId: stripeCustomerId ?? undefined,
       stripeSubscriptionId: subscription.id,
       stripePriceId,
-      status: mapStripeStatus(subscription.status)
+      status: mapStripeStatus(subscription.status),
+      currentPeriodEnd: currentPeriodEndUnix ? new Date(currentPeriodEndUnix * 1000) : null
     }
   });
 }
 
 export async function POST(request: Request) {
-  if (!stripe || !process.env.STRIPE_WEBHOOK_SECRET) {
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!stripe || !isStripeWebhookConfigured() || !webhookSecret) {
     return NextResponse.json({ error: "Stripe webhook is not configured." }, { status: 500 });
   }
 
@@ -58,7 +62,7 @@ export async function POST(request: Request) {
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(body, signature, process.env.STRIPE_WEBHOOK_SECRET);
+    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : "Invalid webhook signature." }, { status: 400 });
   }

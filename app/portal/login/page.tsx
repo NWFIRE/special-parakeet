@@ -22,7 +22,7 @@ export default async function PortalLoginPage() {
 
       <section className="mx-auto w-full max-w-md lg:max-w-none">
         <Link href="/" className="mb-6 inline-block font-display text-3xl font-bold text-brand-dark">
-          TaskFlow
+          TradeWorx
         </Link>
         <PortalLoginForm />
         <p className="mt-4 text-sm text-slate-600">
@@ -32,3 +32,4 @@ export default async function PortalLoginPage() {
     </main>
   );
 }
+
